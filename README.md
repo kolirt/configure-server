@@ -104,6 +104,13 @@ npm install -g n
 npm install --global yarn
 ```
 
+## pm2
+
+```
+npm install pm2 -g
+pm2 startup
+```
+
 ## aliases
 
 ```
