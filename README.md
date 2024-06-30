@@ -67,3 +67,17 @@ alias .10='cd ../../../../../../../../../../'
 
 alias switch-php='sudo update-alternatives --config php'
 ```
+
+## nginx
+
+```
+nano /etc/nginx/nginx.conf
+
+http {
+  access_log off;
+  error_log off;
+
+  include /var/www/*/nginx/*.conf;
+  include /var/www/*/nginx/*/*.conf;
+}
+```
