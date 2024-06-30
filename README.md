@@ -17,6 +17,33 @@ sudo apt-get install git
 sudo apt install nginx
 ```
 
+```
+rm -rf /var/www/html
+```
+
+```
+nano /etc/nginx/nginx.conf
+
+http {
+  access_log off;
+  error_log off;
+
+  include /var/www/*/nginx/*.conf;
+  include /var/www/*/nginx/*/*.conf;
+}
+```
+
+```
+nano /etc/nginx/sites-available/default
+
+server {
+  listen 80 default;
+  listen [::]:80 default;
+
+  return 404;
+}
+```
+
 ## redis
 
 ```
@@ -66,29 +93,4 @@ alias .9='cd ../../../../../../../../../'
 alias .10='cd ../../../../../../../../../../'
 
 alias switch-php='sudo update-alternatives --config php'
-```
-
-## nginx
-
-```
-nano /etc/nginx/nginx.conf
-
-http {
-  access_log off;
-  error_log off;
-
-  include /var/www/*/nginx/*.conf;
-  include /var/www/*/nginx/*/*.conf;
-}
-```
-
-```
-nano /etc/nginx/sites-available/default
-
-server {
-  listen 80 default;
-  listen [::]:80 default;
-
-  return 404;
-}
 ```
