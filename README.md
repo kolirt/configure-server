@@ -48,3 +48,22 @@ curl -fsSL https://raw.githubusercontent.com/tj/n/master/bin/n | bash -s lts
 npm install -g n
 npm install --global yarn
 ```
+
+## aliases
+
+```
+nano ~/.bash_aliases
+
+alias .1='cd ../'
+alias .2='cd ../../'
+alias .3='cd ../../../'
+alias .4='cd ../../../../'
+alias .5='cd ../../../../../'
+alias .6='cd ../../../../../../'
+alias .7='cd ../../../../../../../'
+alias .8='cd ../../../../../../../../'
+alias .9='cd ../../../../../../../../../'
+alias .10='cd ../../../../../../../../../../'
+
+alias switch-php='sudo update-alternatives --config php'
+```
