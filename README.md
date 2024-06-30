@@ -44,6 +44,10 @@ server {
 }
 ```
 
+```
+sudo service nginx restart
+```
+
 ## redis
 
 ```
