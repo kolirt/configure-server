@@ -98,3 +98,9 @@ alias .10='cd ../../../../../../../../../../'
 
 alias switch-php='sudo update-alternatives --config php'
 ```
+
+## ssh
+
+```
+ssh-keygen
+```
