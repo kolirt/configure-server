@@ -81,3 +81,14 @@ http {
   include /var/www/*/nginx/*/*.conf;
 }
 ```
+
+```
+nano /etc/nginx/sites-available/default
+
+server {
+  listen 80 default;
+  listen [::]:80 default;
+
+  return 404;
+}
+```
