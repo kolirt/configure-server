@@ -63,6 +63,30 @@ sudo add-apt-repository ppa:ondrej/php
 sudo apt install -y php8.3 php8.3-fpm php8.3-dev php8.3-curl php8.3-gd php8.3-intl php8.3-mysql php8.3-mbstring php8.3-xml php8.3-bcmath php8.3-memcached php8.3-zip php8.3-gmp php-redis
 ```
 
+```
+nano /etc/php/8.3/cli/php.ini
+
+opcache.enable=1
+opcache.enable_cli=1
+```
+
+```
+nano /etc/php/8.3/fpm/php.ini
+
+opcache.enable=1
+opcache.enable_cli=1
+```
+
+```
+nano /etc/php/8.3/mods-available/opcache.ini
+
+opcache.jit=1255
+opcache.jit_buffer_size=128M
+opcache.jit_debug=0
+opcache.jit_hot_func=1
+opcache.jit_hot_func_threshold=5
+```
+
 ## composer
 
 ```
