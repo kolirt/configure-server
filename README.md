@@ -13,15 +13,15 @@ sudo apt-get install git
 
 ## nginx
 
-```
+```bash
 sudo apt install nginx
 ```
 
-```
+```bash
 rm -rf /var/www/html
 ```
 
-```
+```bash
 nano /etc/nginx/nginx.conf
 
 http {
@@ -33,7 +33,7 @@ http {
 }
 ```
 
-```
+```bash
 nano /etc/nginx/sites-available/default
 
 server {
@@ -44,8 +44,29 @@ server {
 }
 ```
 
-```
+```bash
 sudo service nginx restart
+```
+
+# nginx basic auth
+```bash
+sudo apt install apache2-utils
+```
+
+create user with creating file
+```
+sudo htpasswd -c /etc/nginx/.htpasswd username
+```
+
+create user without creating file
+```
+sudo htpasswd /etc/nginx/.htpasswd username
+```
+
+add to *.conf
+```
+auth_basic "Restricted Content";
+auth_basic_user_file /etc/nginx/.htpasswd;
 ```
 
 ## redis
