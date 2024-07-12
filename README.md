@@ -48,7 +48,7 @@ server {
 sudo service nginx restart
 ```
 
-# nginx basic auth
+## nginx basic auth
 ```bash
 sudo apt install apache2-utils
 ```
