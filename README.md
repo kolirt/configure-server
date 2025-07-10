@@ -86,7 +86,7 @@ sudo systemctl enable redis-server.service
 ```
 sudo apt-get install software-properties-common
 sudo add-apt-repository ppa:ondrej/php
-sudo apt install -y php8.3 php8.3-fpm php8.3-dev php8.3-curl php8.3-gd php8.3-intl php8.3-mysql php8.3-mbstring php8.3-xml php8.3-bcmath php8.3-memcached php8.3-zip php8.3-gmp php-redis
+sudo apt install -y php8.3 php8.3-fpm php8.3-redis php8.3-dev php8.3-curl php8.3-gd php8.3-intl php8.3-mysql php8.3-mbstring php8.3-xml php8.3-bcmath php8.3-memcached php8.3-zip php8.3-gmp php-redis
 ```
 
 ```
