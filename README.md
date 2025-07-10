@@ -81,6 +81,14 @@ sudo apt-get install redis-server
 sudo systemctl enable redis-server.service
 ```
 
+## mysql
+
+```
+sudo apt update
+sudo apt install mysql-server
+sudo systemctl start mysql.service
+```
+
 ## php8.3
 
 ```
