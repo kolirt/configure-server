@@ -87,6 +87,13 @@ sudo systemctl enable redis-server.service
 sudo apt update
 sudo apt install mysql-server
 sudo systemctl start mysql.service
+
+sudo mysql_secure_installation
+
+# change password
+sudo mysql
+mysql> ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+mysql> exit
 ```
 
 ## php8.3
