@@ -71,8 +71,7 @@ auth_basic_user_file /etc/nginx/.htpasswd;
 ## redis
 
 ```
-sudo apt-get update
-sudo apt-get install redis
+sudo apt-get update && sudo apt-get install redis -y
 ```
 
 ```
