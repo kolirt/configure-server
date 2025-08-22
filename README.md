@@ -121,11 +121,18 @@ opcache.enable_cli=1
 ```
 nano /etc/php/8.3/mods-available/opcache.ini
 
+zend_extension=opcache.so
+
 opcache.jit=1255
 opcache.jit_buffer_size=128M
 opcache.jit_debug=0
-opcache.jit_hot_func=1
-opcache.jit_hot_func_threshold=5
+
+opcache.memory_consumption=128
+opcache.interned_strings_buffer=8
+opcache.max_accelerated_files=10000
+opcache.revalidate_freq=2
+opcache.fast_shutdown=1
+opcache.enable_file_override=0
 ```
 
 ## composer
