@@ -10,6 +10,12 @@ sudo apt-get update && sudo apt-get upgrade -y
 sudo apt-get install git -y
 ```
 
+## unzip
+
+```
+sudo apt-get install unzip
+```
+
 ## nginx
 
 ```bash
