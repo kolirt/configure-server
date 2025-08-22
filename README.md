@@ -84,6 +84,20 @@ auth_basic "Restricted Content";
 auth_basic_user_file /etc/nginx/.htpasswd;
 ```
 
+## certbot
+
+```
+sudo apt install certbot python3-certbot-nginx -y
+
+sudo certbot --nginx -d example.com
+```
+
+```
+sudo crontab -e
+
+0 3 * * * /usr/bin/certbot renew --quiet --post-hook "systemctl reload nginx"
+```
+
 ## redis
 
 ```
