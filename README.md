@@ -1,20 +1,19 @@
 # configure-server
 
 ```
-sudo apt-get update
-sudo apt-get upgrade
+sudo apt-get update && sudo apt-get upgrade -y
 ```
 
 ## git
 
 ```
-sudo apt-get install git
+sudo apt-get install git -y
 ```
 
 ## nginx
 
 ```bash
-sudo apt install nginx
+sudo apt install nginx -y
 ```
 
 ```bash
