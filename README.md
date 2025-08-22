@@ -37,8 +37,8 @@ http {
 nano /etc/nginx/sites-available/default
 
 server {
-  listen 80 default;
-  listen [::]:80 default;
+  listen 80 default_server;
+  listen [::]:80 default_server;
 
   return 404;
 }
