@@ -4,6 +4,16 @@
 sudo apt-get update && sudo apt-get upgrade -y
 ```
 
+## configure swap
+
+```
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+sudo echo '/swapfile none swap sw 0 0' >> /etc/fstab
+```
+
 ## git
 
 ```
@@ -14,16 +24,6 @@ sudo apt-get install git -y
 
 ```
 sudo apt-get install unzip
-```
-
-## configure swap
-
-```
-sudo fallocate -l 4G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-sudo echo '/swapfile none swap sw 0 0' >> /etc/fstab
 ```
 
 ## nginx
