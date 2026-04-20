@@ -34,13 +34,6 @@ pkg_install() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"
 }
 
-ensure_whiptail() {
-  if ! require_cmd whiptail; then
-    log_info "Installing whiptail..."
-    pkg_install whiptail
-  fi
-}
-
 prompt_secret() {
   local label="$1" out_var="$2" p1 p2
   while true; do
@@ -80,23 +73,41 @@ readonly MODULES=(
 )
 
 select_modules() {
-  local args=() entry id desc
-  for entry in "${MODULES[@]}"; do
-    id="${entry%%|*}"
-    desc="${entry#*|}"
-    args+=("$id" "$desc" "OFF")
-  done
+  local i=1 entry id desc
+  {
+    echo
+    echo "Available modules:"
+    for entry in "${MODULES[@]}"; do
+      id="${entry%%|*}"
+      desc="${entry#*|}"
+      printf '  %2d) %-20s %s\n' "$i" "$id" "$desc"
+      i=$((i+1))
+    done
+    echo
+    echo "Type module numbers separated by space (e.g. '1 2 5 9'), or 'all' for everything."
+  } >&2
 
-  local chosen
-  chosen=$(whiptail --title "configure-server" \
-                    --checklist "Select modules to install (space to toggle):" \
-                    20 72 13 \
-                    --separate-output \
-                    "${args[@]}" 3>&1 1>&2 2>&3) || {
-    log_warn "Selection cancelled."
-    exit 0
-  }
-  echo "$chosen"
+  local input
+  read -rp "> " input
+
+  local -a chosen=()
+  if [[ "$input" == "all" ]]; then
+    for entry in "${MODULES[@]}"; do
+      chosen+=("${entry%%|*}")
+    done
+  else
+    local n
+    for n in $input; do
+      if [[ "$n" =~ ^[0-9]+$ ]] && (( n >= 1 && n <= ${#MODULES[@]} )); then
+        entry="${MODULES[$((n-1))]}"
+        chosen+=("${entry%%|*}")
+      else
+        log_warn "Ignoring invalid token: '$n'"
+      fi
+    done
+  fi
+
+  printf '%s\n' "${chosen[@]}"
 }
 
 run_module() {
@@ -379,18 +390,32 @@ module_php() {
     return 1
   fi
 
-  local args=() v
+  local -a versions_arr=()
+  local v
   while IFS= read -r v; do
-    args+=("$v" "php$v-fpm")
+    versions_arr+=("$v")
   done <<<"$versions"
 
-  local chosen
-  chosen=$(whiptail --title "PHP version" \
-                    --menu "Select PHP version to install:" 20 50 12 \
-                    "${args[@]}" 3>&1 1>&2 2>&3) || {
-    log_warn "PHP version selection cancelled."
+  {
+    echo
+    echo "Available PHP versions:"
+    local i=1
+    for v in "${versions_arr[@]}"; do
+      printf '  %2d) php%s\n' "$i" "$v"
+      i=$((i+1))
+    done
+  } >&2
+
+  local input chosen
+  read -rp "PHP version number (empty = highest = ${versions_arr[0]}): " input
+  if [[ -z "$input" ]]; then
+    chosen="${versions_arr[0]}"
+  elif [[ "$input" =~ ^[0-9]+$ ]] && (( input >= 1 && input <= ${#versions_arr[@]} )); then
+    chosen="${versions_arr[$((input-1))]}"
+  else
+    log_error "Invalid selection: '$input'"
     return 1
-  }
+  fi
 
   local V="$chosen"
   log_info "Installing PHP $V ..."
@@ -565,7 +590,6 @@ main() {
 
   log_info "Updating apt index..."
   apt-get update -y
-  ensure_whiptail
 
   local selected
   selected=$(select_modules)

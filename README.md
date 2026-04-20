@@ -10,15 +10,9 @@ On a fresh Ubuntu server:
 curl -fsSL https://raw.githubusercontent.com/kolirt/configure-server/master/setup.sh | sudo bash
 ```
 
-If `whiptail` fails because stdin is a pipe (no TTY), download first:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/kolirt/configure-server/master/setup.sh -o /tmp/setup.sh && sudo bash /tmp/setup.sh
-```
-
 ## What it does
 
-Shows a `whiptail` checklist — use space to toggle modules, Enter to start. Modules run in canonical order; sensitive values (passwords, domains, service users) are prompted inline. At the end the script prints a credentials block — **save it immediately**, nothing is persisted to disk.
+Prints a numbered list of modules, reads your selection (e.g. `1 2 5 9` or `all`), then runs the chosen modules in canonical order. Sensitive values (passwords, domains, service users) are prompted inline. At the end the script prints a credentials block — **save it immediately**, nothing is persisted to disk.
 
 Modules:
 
