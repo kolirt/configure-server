@@ -474,11 +474,16 @@ module_php() {
 
   local V="$chosen"
   log_info "Installing PHP $V ..."
-  pkg_install \
+  # Note: `sockets` and `pcntl` extensions are bundled with the main phpX.Y
+  # package in ondrej/php, no separate packages exist.
+  if ! pkg_install \
     "php$V" "php$V-fpm" "php$V-redis" "php$V-dev" "php$V-curl" \
     "php$V-gd" "php$V-intl" "php$V-mysql" "php$V-mbstring" \
     "php$V-xml" "php$V-bcmath" "php$V-memcached" "php$V-zip" \
-    "php$V-gmp" "php$V-sockets" "php$V-pcntl" php-redis
+    "php$V-gmp" php-redis; then
+    log_error "Failed to install PHP $V packages."
+    return 1
+  fi
 
   local ini
   for ini in "/etc/php/$V/cli/php.ini" "/etc/php/$V/fpm/php.ini"; do
