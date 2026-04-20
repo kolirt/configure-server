@@ -12,7 +12,9 @@ curl -fsSL https://raw.githubusercontent.com/kolirt/configure-server/master/setu
 
 ## What it does
 
-Prints a numbered list of modules, reads your selection (e.g. `1 2 5 9` or `all`), then runs the chosen modules in canonical order. Sensitive values (passwords, domains, service users) are prompted inline. At the end the script prints a credentials block — **save it immediately**, nothing is persisted to disk.
+Opens an `fzf` picker — arrow keys to navigate, `Tab` to toggle, `Ctrl-A` to select all, `Enter` to confirm. Modules run in canonical order; sensitive values (passwords, domains, service users) are prompted inline. At the end the script prints a credentials block — **save it immediately**, nothing is persisted to disk.
+
+If `fzf` is not installed it is installed from the Ubuntu repositories on first run.
 
 Modules:
 

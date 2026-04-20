@@ -34,6 +34,13 @@ pkg_install() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"
 }
 
+ensure_fzf() {
+  if ! require_cmd fzf; then
+    log_info "Installing fzf..."
+    pkg_install fzf
+  fi
+}
+
 prompt_secret() {
   local label="$1" out_var="$2" p1 p2
   while true; do
@@ -73,41 +80,29 @@ readonly MODULES=(
 )
 
 select_modules() {
-  local i=1 entry id desc
-  {
-    echo
-    echo "Available modules:"
-    for entry in "${MODULES[@]}"; do
-      id="${entry%%|*}"
-      desc="${entry#*|}"
-      printf '  %2d) %-20s %s\n' "$i" "$id" "$desc"
-      i=$((i+1))
-    done
-    echo
-    echo "Type module numbers separated by space (e.g. '1 2 5 9'), or 'all' for everything."
-  } >&2
+  local -a lines=()
+  local entry id desc
+  for entry in "${MODULES[@]}"; do
+    id="${entry%%|*}"
+    desc="${entry#*|}"
+    lines+=("$(printf '%-20s  %s' "$id" "$desc")")
+  done
 
-  local input
-  read -rp "> " input
+  local selection
+  selection=$(printf '%s\n' "${lines[@]}" | fzf \
+    --multi \
+    --height=80% \
+    --layout=reverse \
+    --border \
+    --prompt="modules> " \
+    --header="Tab: toggle   Enter: confirm   Ctrl-A: select all   Ctrl-D: deselect all" \
+    --bind="ctrl-a:select-all,ctrl-d:deselect-all") || {
+    log_warn "Selection cancelled."
+    exit 0
+  }
 
-  local -a chosen=()
-  if [[ "$input" == "all" ]]; then
-    for entry in "${MODULES[@]}"; do
-      chosen+=("${entry%%|*}")
-    done
-  else
-    local n
-    for n in $input; do
-      if [[ "$n" =~ ^[0-9]+$ ]] && (( n >= 1 && n <= ${#MODULES[@]} )); then
-        entry="${MODULES[$((n-1))]}"
-        chosen+=("${entry%%|*}")
-      else
-        log_warn "Ignoring invalid token: '$n'"
-      fi
-    done
-  fi
-
-  printf '%s\n' "${chosen[@]}"
+  # First column of each selected line is the module id.
+  awk '{print $1}' <<<"$selection"
 }
 
 run_module() {
@@ -390,30 +385,18 @@ module_php() {
     return 1
   fi
 
-  local -a versions_arr=()
-  local v
-  while IFS= read -r v; do
-    versions_arr+=("$v")
-  done <<<"$versions"
-
-  {
-    echo
-    echo "Available PHP versions:"
-    local i=1
-    for v in "${versions_arr[@]}"; do
-      printf '  %2d) php%s\n' "$i" "$v"
-      i=$((i+1))
-    done
-  } >&2
-
-  local input chosen
-  read -rp "PHP version number (empty = highest = ${versions_arr[0]}): " input
-  if [[ -z "$input" ]]; then
-    chosen="${versions_arr[0]}"
-  elif [[ "$input" =~ ^[0-9]+$ ]] && (( input >= 1 && input <= ${#versions_arr[@]} )); then
-    chosen="${versions_arr[$((input-1))]}"
-  else
-    log_error "Invalid selection: '$input'"
+  local chosen
+  chosen=$(printf '%s\n' "$versions" | fzf \
+    --height=40% \
+    --layout=reverse \
+    --border \
+    --prompt="php version> " \
+    --header="Enter: confirm") || {
+    log_warn "PHP version selection cancelled."
+    return 1
+  }
+  if [[ -z "$chosen" ]]; then
+    log_error "No PHP version selected."
     return 1
   fi
 
@@ -590,6 +573,7 @@ main() {
 
   log_info "Updating apt index..."
   apt-get update -y
+  ensure_fzf
 
   local selected
   selected=$(select_modules)
