@@ -109,7 +109,7 @@ select_modules() {
   log_info "Opening module picker (${#lines[@]} modules)..." >&2
 
   local selection fzf_rc=0
-  # Force UI to the real TTY so pipe-launched (curl|bash) invocations still work.
+  # stdin of fzf is the module list (via pipe); fzf opens /dev/tty itself for UI.
   selection=$(printf '%s\n' "${lines[@]}" | fzf \
     --multi \
     --height=80% \
@@ -119,8 +119,7 @@ select_modules() {
     --with-nth=1,2,3 \
     --prompt="modules> " \
     --header="Tab: toggle   Enter: confirm   Ctrl-A: select all   Ctrl-D: deselect all   [x] = already configured" \
-    --bind="ctrl-a:select-all,ctrl-d:deselect-all" \
-    </dev/tty) || fzf_rc=$?
+    --bind="ctrl-a:select-all,ctrl-d:deselect-all") || fzf_rc=$?
 
   if (( fzf_rc == 130 )); then
     log_warn "Selection cancelled (Esc / Ctrl-C)."
@@ -464,8 +463,7 @@ module_php() {
     --layout=reverse \
     --border \
     --prompt="php version> " \
-    --header="Enter: confirm" \
-    </dev/tty) || {
+    --header="Enter: confirm") || {
     log_warn "PHP version selection cancelled."
     return 1
   }
