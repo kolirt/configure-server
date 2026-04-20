@@ -103,25 +103,40 @@ select_modules() {
     else
       status="[ ]"
     fi
-    lines+=("$(printf '%s\t%-20s  %s' "$status" "$id" "$desc")")
+    lines+=("$(printf '%s\t%s\t%s' "$status" "$id" "$desc")")
   done
 
-  local selection
+  log_info "Opening module picker (${#lines[@]} modules)..." >&2
+
+  local selection fzf_rc=0
+  # Force UI to the real TTY so pipe-launched (curl|bash) invocations still work.
   selection=$(printf '%s\n' "${lines[@]}" | fzf \
     --multi \
     --height=80% \
     --layout=reverse \
     --border \
-    --delimiter='\t' \
+    --delimiter=$'\t' \
+    --with-nth=1,2,3 \
     --prompt="modules> " \
     --header="Tab: toggle   Enter: confirm   Ctrl-A: select all   Ctrl-D: deselect all   [x] = already configured" \
-    --bind="ctrl-a:select-all,ctrl-d:deselect-all") || {
-    log_warn "Selection cancelled."
-    exit 0
-  }
+    --bind="ctrl-a:select-all,ctrl-d:deselect-all" \
+    </dev/tty) || fzf_rc=$?
 
-  # Line format is "<status>\t<id>  <description>"; extract id field.
-  awk -F'\t' '{print $2}' <<<"$selection" | awk '{print $1}'
+  if (( fzf_rc == 130 )); then
+    log_warn "Selection cancelled (Esc / Ctrl-C)."
+    exit 0
+  fi
+  if (( fzf_rc != 0 )); then
+    log_error "fzf exited with code $fzf_rc."
+    exit 1
+  fi
+  if [[ -z "$selection" ]]; then
+    log_warn "No modules selected (use Tab or Ctrl-A to mark items before Enter)."
+    exit 0
+  fi
+
+  # Extract id (second tab-delimited field).
+  awk -F'\t' '{print $2}' <<<"$selection"
 }
 
 run_module() {
@@ -449,7 +464,8 @@ module_php() {
     --layout=reverse \
     --border \
     --prompt="php version> " \
-    --header="Enter: confirm") || {
+    --header="Enter: confirm" \
+    </dev/tty) || {
     log_warn "PHP version selection cancelled."
     return 1
   }
