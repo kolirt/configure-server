@@ -556,6 +556,13 @@ module_ssh_keygen() {
 
 main() {
   require_root
+
+  # Re-attach stdin to the controlling terminal so `whiptail` and `read` work
+  # even when the script is launched via `curl ... | sudo bash`.
+  if [[ ! -t 0 && -r /dev/tty ]]; then
+    exec </dev/tty
+  fi
+
   log_info "Updating apt index..."
   apt-get update -y
   ensure_whiptail
