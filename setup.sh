@@ -11,6 +11,7 @@ readonly C_OK=$'\033[1;32m'
 declare -a CREDENTIALS_LOG=()
 declare -a INSTALLED=()
 declare -a FAILED=()
+declare -a SKIPPED=()
 
 log_info()  { printf '%s[INFO]%s %s\n'  "$C_INFO" "$C_RESET" "$*"; }
 log_warn()  { printf '%s[WARN]%s %s\n'  "$C_WARN" "$C_RESET" "$*" >&2; }
@@ -32,6 +33,18 @@ require_cmd() {
 
 pkg_install() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"
+}
+
+# Dispatch to per-module check function: returns 0 if the module looks already
+# configured on this host, 1 otherwise. Modules without a check are never
+# considered done (always re-runnable).
+is_module_done() {
+  local id="$1" fn="check_${1//-/_}"
+  if declare -F "$fn" >/dev/null; then
+    "$fn"
+  else
+    return 1
+  fi
 }
 
 ensure_fzf() {
@@ -81,11 +94,16 @@ readonly MODULES=(
 
 select_modules() {
   local -a lines=()
-  local entry id desc
+  local entry id desc status
   for entry in "${MODULES[@]}"; do
     id="${entry%%|*}"
     desc="${entry#*|}"
-    lines+=("$(printf '%-20s  %s' "$id" "$desc")")
+    if is_module_done "$id"; then
+      status="[done]"
+    else
+      status="[    ]"
+    fi
+    lines+=("$(printf '%s %-20s  %s' "$status" "$id" "$desc")")
   done
 
   local selection
@@ -95,14 +113,14 @@ select_modules() {
     --layout=reverse \
     --border \
     --prompt="modules> " \
-    --header="Tab: toggle   Enter: confirm   Ctrl-A: select all   Ctrl-D: deselect all" \
+    --header="Tab: toggle   Enter: confirm   Ctrl-A: select all   Ctrl-D: deselect all   [done] = already completed" \
     --bind="ctrl-a:select-all,ctrl-d:deselect-all") || {
     log_warn "Selection cancelled."
     exit 0
   }
 
-  # First column of each selected line is the module id.
-  awk '{print $1}' <<<"$selection"
+  # Module id is the second whitespace-separated column (after the [status] marker).
+  awk '{print $2}' <<<"$selection"
 }
 
 run_module() {
@@ -110,6 +128,11 @@ run_module() {
   if ! declare -F "$fn" >/dev/null; then
     log_error "No implementation for module '$id' (function $fn missing)."
     FAILED+=("$id")
+    return 0
+  fi
+  if is_module_done "$id"; then
+    log_info "=== Skipping: $id (already configured) ==="
+    SKIPPED+=("$id")
     return 0
   fi
   log_info "=== Running: $id ==="
@@ -130,6 +153,9 @@ print_summary() {
   if ((${#INSTALLED[@]})); then
     echo " Installed: ${INSTALLED[*]}"
   fi
+  if ((${#SKIPPED[@]})); then
+    echo " Skipped:   ${SKIPPED[*]} (already completed previously)"
+  fi
   if ((${#FAILED[@]})); then
     echo " Failed:    ${FAILED[*]}"
   fi
@@ -149,6 +175,37 @@ print_summary() {
 module_system_update() {
   apt-get update -y
   DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+}
+
+check_swap()              { [[ -n "$(swapon --show --noheadings 2>/dev/null || true)" ]]; }
+check_git()               { require_cmd git; }
+check_unzip()             { require_cmd unzip; }
+check_nginx()             { require_cmd nginx && systemctl is-active --quiet nginx 2>/dev/null; }
+check_nginx_basic_auth()  { [[ -f /etc/nginx/.htpasswd ]] && require_cmd htpasswd; }
+check_certbot()           { require_cmd certbot && crontab -l 2>/dev/null | grep -qF 'certbot renew'; }
+check_redis()             { require_cmd redis-server && systemctl is-active --quiet redis-server 2>/dev/null; }
+check_mysql()             { require_cmd mysql && systemctl is-active --quiet mysql 2>/dev/null; }
+check_php()               { require_cmd php && php -v 2>/dev/null | grep -qE '^PHP [0-9]+\.[0-9]+'; }
+check_composer()          { require_cmd composer; }
+check_node()              { require_cmd node && require_cmd yarn && require_cmd n; }
+check_pm2()               { require_cmd pm2 && systemctl list-unit-files 2>/dev/null | grep -qE '^pm2-[^ ]+\.service'; }
+check_aliases() {
+  local owner home_dir
+  if [[ -n "${SUDO_USER:-}" ]] && id -u "$SUDO_USER" >/dev/null 2>&1; then
+    owner="$SUDO_USER"
+  else
+    owner="root"
+  fi
+  home_dir=$(getent passwd "$owner" | cut -d: -f6)
+  [[ -n "$home_dir" && -f "$home_dir/.bash_aliases" ]] && \
+    grep -qF '# configure-server aliases' "$home_dir/.bash_aliases"
+}
+check_ssh_keygen() {
+  local owner home_dir
+  owner="${SUDO_USER:-root}"
+  home_dir=$(getent passwd "$owner" | cut -d: -f6)
+  [[ -n "$home_dir" ]] && \
+    compgen -G "$home_dir/.ssh/id_*" >/dev/null
 }
 
 compute_swap_gb() {
@@ -441,7 +498,7 @@ opcache.enable_file_override=0
 OPC
 
   systemctl restart "php$V-fpm"
-  INSTALLED+=("php$V")
+  log_cred "PHP version" "$V"
 }
 
 module_composer() {
@@ -456,15 +513,37 @@ module_composer() {
   fi
 
   local expected actual tmp=/tmp/composer-setup.php
-  expected=$(curl -fsSL https://composer.github.io/installer.sig)
-  curl -fsSL https://getcomposer.org/installer -o "$tmp"
-  actual=$(php -r "echo hash_file('sha384', '$tmp');")
-  if [[ "$expected" != "$actual" ]]; then
-    log_error "Composer installer hash mismatch (expected $expected, got $actual)."
+  log_info "Fetching expected installer signature..."
+  if ! expected=$(curl -fsSL https://composer.github.io/installer.sig); then
+    log_error "Could not fetch installer signature from composer.github.io."
+    return 1
+  fi
+  if [[ -z "$expected" ]]; then
+    log_error "Empty signature received from composer.github.io."
+    return 1
+  fi
+
+  log_info "Downloading composer installer..."
+  if ! curl -fsSL https://getcomposer.org/installer -o "$tmp"; then
+    log_error "Could not download installer from getcomposer.org."
     rm -f "$tmp"
     return 1
   fi
-  php "$tmp" --install-dir=/usr/local/bin --filename=composer
+
+  actual=$(php -r "echo hash_file('sha384', '$tmp');")
+  if [[ "$expected" != "$actual" ]]; then
+    log_error "Composer installer hash mismatch."
+    log_error "  expected: $expected"
+    log_error "  actual:   $actual"
+    rm -f "$tmp"
+    return 1
+  fi
+
+  if ! php "$tmp" --install-dir=/usr/local/bin --filename=composer; then
+    log_error "Composer installer script failed."
+    rm -f "$tmp"
+    return 1
+  fi
   rm -f "$tmp"
 }
 
@@ -522,12 +601,24 @@ module_pm2() {
 }
 
 module_aliases() {
-  local target
-  if [[ -n "${SUDO_USER:-}" ]]; then
-    target="/home/$SUDO_USER/.bash_aliases"
+  local owner target home_dir
+  if [[ -n "${SUDO_USER:-}" ]] && id -u "$SUDO_USER" >/dev/null 2>&1; then
+    owner="$SUDO_USER"
   else
-    target="/root/.bash_aliases"
+    owner="root"
   fi
+
+  home_dir=$(getent passwd "$owner" | cut -d: -f6)
+  if [[ -z "$home_dir" ]]; then
+    log_error "Could not resolve home directory for user '$owner'."
+    return 1
+  fi
+  if [[ ! -d "$home_dir" ]]; then
+    log_error "Home directory '$home_dir' does not exist for user '$owner'."
+    return 1
+  fi
+
+  target="$home_dir/.bash_aliases"
   local marker='# configure-server aliases'
 
   if [[ -f "$target" ]] && grep -qF "$marker" "$target"; then
@@ -535,6 +626,7 @@ module_aliases() {
     return 0
   fi
 
+  log_info "Installing aliases into $target (owner: $owner)..."
   cat >> "$target" <<'ALIASES'
 
 # configure-server aliases
@@ -551,8 +643,12 @@ alias .10='cd ../../../../../../../../../../'
 alias switch-php='sudo update-alternatives --config php'
 ALIASES
 
-  if [[ -n "${SUDO_USER:-}" ]]; then
-    chown "$SUDO_USER:$SUDO_USER" "$target"
+  if [[ "$owner" != "root" ]]; then
+    local group
+    group=$(id -gn "$owner" 2>/dev/null || echo "$owner")
+    if ! chown "$owner:$group" "$target"; then
+      log_warn "chown $owner:$group $target failed — aliases file written but ownership not changed."
+    fi
   fi
 }
 
