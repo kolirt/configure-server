@@ -99,11 +99,11 @@ select_modules() {
     id="${entry%%|*}"
     desc="${entry#*|}"
     if is_module_done "$id"; then
-      status="[done]"
+      status="[x]"
     else
-      status="[    ]"
+      status="[ ]"
     fi
-    lines+=("$(printf '%s %-20s  %s' "$status" "$id" "$desc")")
+    lines+=("$(printf '%s\t%-20s  %s' "$status" "$id" "$desc")")
   done
 
   local selection
@@ -112,15 +112,16 @@ select_modules() {
     --height=80% \
     --layout=reverse \
     --border \
+    --delimiter='\t' \
     --prompt="modules> " \
-    --header="Tab: toggle   Enter: confirm   Ctrl-A: select all   Ctrl-D: deselect all   [done] = already completed" \
+    --header="Tab: toggle   Enter: confirm   Ctrl-A: select all   Ctrl-D: deselect all   [x] = already configured" \
     --bind="ctrl-a:select-all,ctrl-d:deselect-all") || {
     log_warn "Selection cancelled."
     exit 0
   }
 
-  # Module id is the second whitespace-separated column (after the [status] marker).
-  awk '{print $2}' <<<"$selection"
+  # Line format is "<status>\t<id>  <description>"; extract id field.
+  awk -F'\t' '{print $2}' <<<"$selection" | awk '{print $1}'
 }
 
 run_module() {
