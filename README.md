@@ -7,8 +7,10 @@ Interactive bash script for provisioning a fresh Ubuntu 22.04 / 24.04 server for
 On a fresh Ubuntu server:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kolirt/configure-server/master/setup.sh | sudo bash
+git clone https://github.com/kolirt/configure-server.git /tmp/configure-server && sudo /tmp/configure-server/setup.sh; rm -rf /tmp/configure-server
 ```
+
+The script needs `lib/` and `modules/` on disk next to `setup.sh`, so a piped `curl … | sudo bash` install is no longer supported — clone the repo (into `/tmp` so it gets wiped on reboot) first.
 
 ## What it does
 
@@ -48,7 +50,7 @@ If the SSH session may drop:
 
 ```bash
 tmux new -s setup
-curl -fsSL https://raw.githubusercontent.com/kolirt/configure-server/master/setup.sh | sudo bash
+git clone https://github.com/kolirt/configure-server.git /tmp/configure-server && sudo /tmp/configure-server/setup.sh; rm -rf /tmp/configure-server
 # detach: Ctrl+b d
 # reattach: tmux attach -t setup
 ```
